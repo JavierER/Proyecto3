@@ -1,6 +1,8 @@
 package com.example.javi.chatproject;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -18,6 +20,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,6 +28,8 @@ import android.widget.Toast;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft_17;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,8 +39,11 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
+    JSONObject json, clienteRX;
+    public static String nickname;
     private static final int MY_PERMISSIONS_REQUEST_INTERNET = 1;
     private WebSocketClient mWebSocketClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,20 +111,32 @@ public class MainActivity extends AppCompatActivity
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
+
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        //si el id es igual al usuario mostramos un alert dialog
 
-        } else if (id == R.id.nav_slideshow) {
+        if (id == R.id.usuario) {
+            AlertDialog.Builder alert= new AlertDialog.Builder(this);
+            final EditText user=new EditText(this);
+            user.setSingleLine();
+            user.setPadding(50,0,50,0);
+            alert.setTitle("NickName");
+            alert.setMessage("Introducir NickName");
+            alert.setView(user);
+            alert.setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
 
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+                    nickname=user.getText().toString();
+                    if(nickname!=null){
+                        connectWebSocket();
+                    }
+                }
+            });
+            alert.setNegativeButton("Cancelar",null);
+            alert.create();
+            alert.show();
 
         }
 
@@ -151,8 +171,30 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        TextView textView = (TextView) findViewById(R.id.messages);
-                        textView.setText(textView.getText() + "\n" + message);
+                        TextView textView = (TextView) findViewById(R.id.textmensaje);
+                        String nick;
+                        String msg;
+                        String dest;
+                        Boolean prv;
+                        try {
+                            clienteRX = new JSONObject(message);//creamos un objeto json para recibir id,mensaje,destino y si es privado
+                            nick = clienteRX.getString("id");
+                            msg = clienteRX.getString("mensaje");
+                            dest = clienteRX.getString("destino");
+                            prv = clienteRX.getBoolean("Privado");
+
+                            //este if comprueba si el mensaje que esta recibiendo es o no privado
+                            if (prv.equals(Boolean.TRUE)) {
+                                if (dest.equals(nickname)) {
+                                    textView.setText(textView.getText() + "\n" + nick + "\n" + msg);
+                                }
+                            } else
+                                textView.setText("Mensaje Privado");
+
+                        } catch (JSONException e) {
+
+                            textView.setText(textView.getText() + "\n" + message);
+                        }
                     }
                 });
             }
@@ -171,10 +213,51 @@ public class MainActivity extends AppCompatActivity
         mWebSocketClient.connect();
 
     }
-
     public void sendMessage() {
-        EditText editText = (EditText) findViewById(R.id.message);
-        mWebSocketClient.send(editText.getText().toString());
-        editText.setText("");
+        EditText msg = (EditText) findViewById(R.id.mensaje);
+        EditText destin = (EditText) findViewById(R.id.destino);
+        CheckBox box = (CheckBox) findViewById(R.id.priv);
+        String d, m;
+        Boolean bl;
+        d = destin.getText().toString();
+        m = msg.getText().toString();
+
+        //comprueba si es privado o no
+        if (box.isChecked()) {
+            bl = Boolean.TRUE;
+        } else {
+            bl = Boolean.FALSE;
+        }
+        json = new JSONObject();//creamos un objetos json el cual contendra id,mensaje,destino y si ses privado
+        try {
+            json.put("id", nickname);
+            json.put("mensaje", m);
+            json.put("destino", d);
+            json.put("Privado", bl);
+            msg.setText("");
+            destin.setText("");
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        mWebSocketClient.send(json.toString());
     }
+
+    //Metodo que contiene las instrucciones de uso
+    public void instrucciones() {
+        AlertDialog.Builder build = new AlertDialog.Builder(this);
+        build.setTitle("Conexión");
+        build.setMessage(intruc);
+        build.setPositiveButton("Aceptar", null);
+        build.create();
+        build.show();
+    }
+
+    public String intruc = "Escribe un nick para poder iniciar el chat.\n" +
+            "-En el menu laterl puedes instroducir tu nick.\n" +
+            "- Una vez introducido se conectará automaticamente.";
 }
+
+
+
+
