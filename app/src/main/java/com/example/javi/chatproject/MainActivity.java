@@ -110,6 +110,8 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
+    //metodo en el cual desde el navigation menu(barra lateral) hacemos que pulsando un boton,nos salga un AlertDialog
+    //pidiendo que insertemos el nick que aparecera en el chat web
     public boolean onNavigationItemSelected(MenuItem item) {
 
         int id = item.getItemId();
@@ -145,6 +147,7 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    //Conexion mediante WebSockets donde se le manda la uri de nuestro chat
     private void connectWebSocket() {
 
         URI uri;
@@ -162,10 +165,11 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onOpen(ServerHandshake serverHandshake) {
                 Log.i("Websocket", "Opened");
-                mWebSocketClient.send("Hello from " + Build.MANUFACTURER + " " + Build.MODEL);
+                mWebSocketClient.send("{\"id\":\"" + nickname + "\"}"); //Aqui se envia el mensaje con el nick que hemos puesto
             }
 
             @Override
+            //Con este metodo recogemos los mensajes y recibimos en privado.
             public void onMessage(String s) {
                 final String message = s;
                 runOnUiThread(new Runnable() {
@@ -177,7 +181,7 @@ public class MainActivity extends AppCompatActivity
                         String dest;
                         Boolean prv;
                         try {
-                            clienteRX = new JSONObject(message);//creamos un objeto json para recibir id,mensaje,destino y si es privado
+                            clienteRX = new JSONObject(message); //creamos un objeto json para recibir id,mensaje,destino y si es privado
                             nick = clienteRX.getString("id");
                             msg = clienteRX.getString("mensaje");
                             dest = clienteRX.getString("destino");
@@ -213,6 +217,8 @@ public class MainActivity extends AppCompatActivity
         mWebSocketClient.connect();
 
     }
+
+    // Con este metodo se envian los mensaje al chat de c9, si el mensaje es privado solo lo podra ver la persona seleccionada
     public void sendMessage() {
         EditText msg = (EditText) findViewById(R.id.mensaje);
         EditText destin = (EditText) findViewById(R.id.destino);
