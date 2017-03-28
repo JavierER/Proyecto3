@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity
 
         URI uri;
         try {
-            uri = new URI("ws://192.168.1.150:81");
+            uri = new URI("ws://android-betternerfkindred.c9users.io:8080");
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return;
